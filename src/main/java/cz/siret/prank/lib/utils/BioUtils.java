@@ -15,10 +15,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public enum BioUtils {
     INSTANCE;
@@ -104,11 +101,18 @@ public enum BioUtils {
     }
 
     public List<String> dirToFastaFiles(File dir) throws IOException, StructureException {
-        List<String> result = new ArrayList<>();
+        List<String> result = Collections.synchronizedList(new LinkedList<>());
         File[] listOfFiles = dir.listFiles();
-        for (File f : listOfFiles != null ? listOfFiles : new File[0]) {
-            result.addAll(fileToFastaFiles(f));
-        }
+        List<File> flist = listOfFiles != null ? Arrays.asList(listOfFiles) : Collections.emptyList();
+
+        flist.stream().parallel().forEach(f -> {
+            try {
+                result.addAll(fileToFastaFiles(f));
+            } catch (Exception e) {
+                logger.error("pdb->fasta conversion failed for " + f.getName(), e);
+            }
+        });
+
         return result;
     }
 
